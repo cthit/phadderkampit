@@ -943,3 +943,38 @@ def list_scoreboard(list_id):
     return render_template(
         "list_scoreboard.html", lst=lst, clips=clips, team_results=team_results
     )
+
+@bp.route("/clips/<int:clip_id>/edit", methods=["POST"])
+def edit_clip(clip_id):
+    """Update title, description, and difficulty for a clip"""
+    clip = SoundClip.query.get_or_404(clip_id)
+    
+    title = request.form.get("title", "").strip()
+    description = request.form.get("description", "").strip()
+    difficulty = request.form.get("difficulty", "medium").strip().lower()
+
+    if not title:
+        flash("Title is required", "error")
+        return redirect(url_for("routes.view_list", list_id=clip.list_id))
+
+    if difficulty not in ["easy", "medium", "hard"]:
+        difficulty = "medium"
+
+    # Check for duplicate titles within the list
+    existing = SoundClip.query.filter(
+        SoundClip.list_id == clip.list_id,
+        SoundClip.title == title,
+        SoundClip.id != clip.id
+    ).first()
+
+    if existing:
+        flash(f"Duplicate detected: '{title}' already exists in this list", "error")
+        return redirect(url_for("routes.view_list", list_id=clip.list_id))
+
+    clip.title = title
+    clip.description = description if description else None
+    clip.difficulty = difficulty
+
+    db.session.commit()
+    flash(f"Clip '{clip.title}' updated successfully", "success")
+    return redirect(url_for("routes.view_list", list_id=clip.list_id))
