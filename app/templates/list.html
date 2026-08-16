@@ -129,44 +129,62 @@
         </div>
 
         <div class="batch-clips" style="display: none;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                <h5 style="margin: 0;">Record answers for each clip:</h5>
-                <!-- Toggle button to show/hide bulk action buttons -->
+            <!-- Sorting & Seed Toolbar -->
+            <div style="background: white; border: 1px solid #dee2e6; border-radius: 6px; padding: 0.75rem 1rem; margin-bottom: 1rem; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem;">
+                <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                    <label for="answer-sort-order" style="font-weight: bold; margin: 0;">Sort by:</label>
+                    <select id="answer-sort-order" onchange="applyAnswerSorting()" style="margin: 0; padding: 0.35rem 0.5rem; border-radius: 4px; border: 1px solid #ced4da;">
+                        <option value="random">🎲 Random</option>
+                        <option value="difficulty-asc">🟢 Difficulty (Easy → Hard)</option>
+                        <option value="difficulty-desc">🔴 Difficulty (Hard → Easy)</option>
+                    </select>
+
+                    <label for="answer-sort-seed" style="font-weight: bold; margin: 0; margin-left: 0.5rem;">Seed:</label>
+                    <input type="text" id="answer-sort-seed" value="{{ lst.id }}" placeholder="Seed string" oninput="applyAnswerSorting()" style="margin: 0; padding: 0.35rem 0.5rem; width: 120px; border-radius: 4px; border: 1px solid #ced4da;" />
+
+                    <button type="button" onclick="generateNewSeed()" style="background: #6c757d; color: white; border: none; padding: 0.35rem 0.6rem; border-radius: 4px; font-size: 0.8rem; cursor: pointer;" title="Generate random seed">🎲 New Seed</button>
+                </div>
+
                 <button type="button" onclick="toggleBulkActions()" 
                     style="background: none; border: 1px solid #6c757d; color: #495057; padding: 0.25rem 0.5rem; font-size: 0.8rem; border-radius: 4px; cursor: pointer;">
                     ⚙️ Bulk Options
                 </button>
             </div>
 
-            {% for clip in clips %}
-            <div class="clip-batch-row"
-                style="padding: 0.75rem; margin-bottom: 0.5rem; border: 1px solid #ddd; border-radius: 4px; background: white;">
-                <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
-                    <div style="flex: 1; min-width: 200px;">
-                        <strong>{{ clip.title }}</strong>
-                        {% if clip.difficulty %}
-                        <span style="color: {% if clip.difficulty == 'easy' %}#28a745{% elif clip.difficulty == 'medium' %}#ffc107{% else %}#dc3545{% endif %}; font-weight: bold; margin-left: 0.5rem;">
-                            {% if clip.difficulty == 'easy' %}🟢 Easy{% elif clip.difficulty == 'medium' %}🟡 Medium{% else %}🔴 Hard{% endif %}
-                        </span>
-                        {% endif %}
-                        {% if clip.description %}<br><small style="color: #666;">{{ clip.description }}</small>{% endif %}
-                        <audio controls src="/uploads/{{ clip.filename }}"
-                            style="width: 100%; margin-top: 0.25rem;"></audio>
-                    </div>
+            <!-- Clip Rows Container -->
+            <div id="batch-clip-rows">
+                {% for clip in clips %}
+                <div class="clip-batch-row"
+                    data-clip-id="{{ clip.id }}"
+                    data-difficulty="{{ clip.difficulty or 'medium' }}"
+                    style="padding: 0.75rem; margin-bottom: 0.5rem; border: 1px solid #ddd; border-radius: 4px; background: white;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 200px;">
+                            <strong>{{ clip.title }}</strong>
+                            {% if clip.difficulty %}
+                            <span style="color: {% if clip.difficulty == 'easy' %}#28a745{% elif clip.difficulty == 'medium' %}#ffc107{% else %}#dc3545{% endif %}; font-weight: bold; margin-left: 0.5rem;">
+                                {% if clip.difficulty == 'easy' %}🟢 Easy{% elif clip.difficulty == 'medium' %}🟡 Medium{% else %}🔴 Hard{% endif %}
+                            </span>
+                            {% endif %}
+                            {% if clip.description %}<br><small style="color: #666;">{{ clip.description }}</small>{% endif %}
+                            <audio controls src="/uploads/{{ clip.filename }}"
+                                style="width: 100%; margin-top: 0.25rem;"></audio>
+                        </div>
 
-                    <div style="display: flex; gap: 0.5rem; align-items: center;">
-                        <label style="margin: 0;"><input type="radio" name="clip_{{ clip.id }}_result"
-                                value="correct" /> ✓ Correct</label>
-                        <label style="margin: 0;"><input type="radio" name="clip_{{ clip.id }}_result" value="wrong" />
-                            ✗ Wrong</label>
-                        <label style="margin: 0;"><input type="radio" name="clip_{{ clip.id }}_result" value="skip"
-                                checked /> ⏭️ Skip</label>
+                        <div style="display: flex; gap: 0.5rem; align-items: center;">
+                            <label style="margin: 0;"><input type="radio" name="clip_{{ clip.id }}_result"
+                                    value="correct" /> ✓ Correct</label>
+                            <label style="margin: 0;"><input type="radio" name="clip_{{ clip.id }}_result" value="wrong" />
+                                ✗ Wrong</label>
+                            <label style="margin: 0;"><input type="radio" name="clip_{{ clip.id }}_result" value="skip"
+                                    checked /> ⏭️ Skip</label>
+                        </div>
                     </div>
                 </div>
+                {% endfor %}
             </div>
-            {% endfor %}
 
-            <!-- Bulk actions container (hidden by default) -->
+            <!-- Bulk Actions Panel (Hidden by default) -->
             <div id="bulk-actions-panel" style="display: none; margin-top: 1rem; padding: 0.75rem; background: #e9ecef; border-radius: 4px; gap: 0.5rem; flex-wrap: wrap;">
                 <span style="font-size: 0.85rem; font-weight: bold; width: 100%; margin-bottom: 0.25rem; display: block; color: #495057;">Bulk Actions:</span>
                 <button type="button" onclick="selectAllCorrect()" style="background: #17a2b8; color: white;">✓ Mark All Correct</button>
@@ -543,6 +561,75 @@
             panel.style.display = panel.style.display === 'none' ? 'flex' : 'none';
         }
     }
+
+    // Mulberry32 seeded pseudo-random number generator
+function createPRNG(seedStr) {
+    let h = 0;
+    for (let i = 0; i < seedStr.length; i++) {
+        h = Math.imul(31, h) + seedStr.charCodeAt(i) | 0;
+    }
+    return function() {
+        let t = h += 0x6D2B79F5;
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+}
+
+// Predictable Fisher-Yates shuffle
+function deterministicShuffle(array, rng) {
+    const arr = [...array];
+    for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(rng() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+}
+
+function applyAnswerSorting() {
+    const sortOrder = document.getElementById('answer-sort-order').value;
+    const seed = document.getElementById('answer-sort-seed').value || 'default_seed';
+    const container = document.getElementById('batch-clip-rows');
+    if (!container) return;
+
+    const rows = Array.from(container.getElementsByClassName('clip-batch-row'));
+    const rng = createPRNG(seed);
+
+    let sortedRows = [];
+
+    if (sortOrder === 'random') {
+        sortedRows = deterministicShuffle(rows, rng);
+    } else {
+        // Group by difficulty
+        const easy = rows.filter(r => (r.dataset.difficulty || 'medium') === 'easy');
+        const medium = rows.filter(r => (r.dataset.difficulty || 'medium') === 'medium');
+        const hard = rows.filter(r => (r.dataset.difficulty || 'medium') === 'hard');
+
+        // Predictably shuffle within each difficulty sub-group
+        const shuffledEasy = deterministicShuffle(easy, rng);
+        const shuffledMedium = deterministicShuffle(medium, rng);
+        const shuffledHard = deterministicShuffle(hard, rng);
+
+        if (sortOrder === 'difficulty-asc') {
+            sortedRows = [...shuffledEasy, ...shuffledMedium, ...shuffledHard];
+        } else if (sortOrder === 'difficulty-desc') {
+            sortedRows = [...shuffledHard, ...shuffledMedium, ...shuffledEasy];
+        }
+    }
+
+    // Re-append nodes in sorted order (preserves existing input states and audio playback)
+    sortedRows.forEach(row => container.appendChild(row));
+}
+
+function generateNewSeed() {
+    document.getElementById('answer-sort-seed').value = Math.random().toString(36).substring(2, 8);
+    applyAnswerSorting();
+}
+
+// Initialize sorting on initial load
+document.addEventListener('DOMContentLoaded', function() {
+    applyAnswerSorting();
+});
 </script>
 
 <!-- Quick Actions Footer -->
