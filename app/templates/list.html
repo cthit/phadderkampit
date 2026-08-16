@@ -129,24 +129,30 @@
         </div>
 
         <div class="batch-clips" style="display: none;">
-            <h5 style="margin-bottom: 1rem;">Record answers for each clip:</h5>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h5 style="margin: 0;">Record answers for each clip:</h5>
+                <!-- Toggle button to show/hide bulk action buttons -->
+                <button type="button" onclick="toggleBulkActions()" 
+                    style="background: none; border: 1px solid #6c757d; color: #495057; padding: 0.25rem 0.5rem; font-size: 0.8rem; border-radius: 4px; cursor: pointer;">
+                    ⚙️ Bulk Options
+                </button>
+            </div>
 
             {% for clip in clips %}
             <div class="clip-batch-row"
                 style="padding: 0.75rem; margin-bottom: 0.5rem; border: 1px solid #ddd; border-radius: 4px; background: white;">
-                <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
-                                         <div style="flex: 1; min-width: 200px;">
-                         <strong>{{ clip.title }}</strong>
-                         {% if clip.difficulty %}
-                         <span style="color: {% if clip.difficulty == 'easy' %}#28a745{% elif clip.difficulty == 'medium' %}#ffc107{% else %}#dc3545{% endif %}; font-weight: bold; margin-left: 0.5rem;">
-                             {% if clip.difficulty == 'easy' %}🟢 Easy{% elif clip.difficulty == 'medium' %}🟡 Medium{% else %}🔴 Hard{% endif %}
-                         </span>
-                         {% endif %}
-                         {% if clip.description %}<br><small style="color: #666;">{{ clip.description }}</small>{% endif
-                         %}
-                         <audio controls src="/uploads/{{ clip.filename }}"
-                             style="width: 100%; margin-top: 0.25rem;"></audio>
-                     </div>
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
+                    <div style="flex: 1; min-width: 200px;">
+                        <strong>{{ clip.title }}</strong>
+                        {% if clip.difficulty %}
+                        <span style="color: {% if clip.difficulty == 'easy' %}#28a745{% elif clip.difficulty == 'medium' %}#ffc107{% else %}#dc3545{% endif %}; font-weight: bold; margin-left: 0.5rem;">
+                            {% if clip.difficulty == 'easy' %}🟢 Easy{% elif clip.difficulty == 'medium' %}🟡 Medium{% else %}🔴 Hard{% endif %}
+                        </span>
+                        {% endif %}
+                        {% if clip.description %}<br><small style="color: #666;">{{ clip.description }}</small>{% endif %}
+                        <audio controls src="/uploads/{{ clip.filename }}"
+                            style="width: 100%; margin-top: 0.25rem;"></audio>
+                    </div>
 
                     <div style="display: flex; gap: 0.5rem; align-items: center;">
                         <label style="margin: 0;"><input type="radio" name="clip_{{ clip.id }}_result"
@@ -156,23 +162,20 @@
                         <label style="margin: 0;"><input type="radio" name="clip_{{ clip.id }}_result" value="skip"
                                 checked /> ⏭️ Skip</label>
                     </div>
-
-                    <div style="min-width: 150px;">
-                        <input type="text" name="clip_{{ clip.id }}_notes" placeholder="Notes (optional)"
-                            style="margin: 0;" />
-                    </div>
                 </div>
             </div>
             {% endfor %}
 
-            <div style="margin-top: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <!-- Bulk actions container (hidden by default) -->
+            <div id="bulk-actions-panel" style="display: none; margin-top: 1rem; padding: 0.75rem; background: #e9ecef; border-radius: 4px; gap: 0.5rem; flex-wrap: wrap;">
+                <span style="font-size: 0.85rem; font-weight: bold; width: 100%; margin-bottom: 0.25rem; display: block; color: #495057;">Bulk Actions:</span>
+                <button type="button" onclick="selectAllCorrect()" style="background: #17a2b8; color: white;">✓ Mark All Correct</button>
+                <button type="button" onclick="selectAllWrong()" style="background: #dc3545; color: white;">✗ Mark All Wrong</button>
+                <button type="button" onclick="clearAll()" style="background: #6c757d; color: white;">⏭️ Clear All</button>
+            </div>
+
+            <div style="margin-top: 1rem;">
                 <button type="submit" style="background: #28a745; color: white;">📝 Record All Answers</button>
-                <button type="button" onclick="selectAllCorrect()" style="background: #17a2b8; color: white;">✓ Mark All
-                    Correct</button>
-                <button type="button" onclick="selectAllWrong()" style="background: #dc3545; color: white;">✗ Mark All
-                    Wrong</button>
-                <button type="button" onclick="clearAll()" style="background: #6c757d; color: white;">⏭️ Clear
-                    All</button>
             </div>
         </div>
     </form>
@@ -531,6 +534,13 @@
         if (viewEl && editEl) {
             viewEl.style.display = isEditing ? 'none' : 'flex';
             editEl.style.display = isEditing ? 'flex' : 'none';
+        }
+    }
+
+    function toggleBulkActions() {
+        const panel = document.getElementById('bulk-actions-panel');
+        if (panel) {
+            panel.style.display = panel.style.display === 'none' ? 'flex' : 'none';
         }
     }
 </script>
