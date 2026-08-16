@@ -875,7 +875,7 @@ def scoreboard():
 
 @bp.route("/scoreboard/list/<int:list_id>")
 def list_scoreboard(list_id):
-    """Detailed scoreboard for a specific list"""
+    """Detailed scoreboard for a specific list with difficulty breakdown and tiered sorting"""
     lst = SoundList.query.get_or_404(list_id)
     clips = (
         SoundClip.query.filter_by(list_id=list_id)
@@ -883,12 +883,15 @@ def list_scoreboard(list_id):
         .all()
     )
 
-    # Apply deterministic shuffle to clips based on list content
     clips = deterministic_shuffle(clips, clips)
-
     teams = Team.query.all()
 
-    # Build detailed scoreboard with per-clip results
+    # Pre-calculate total clips per difficulty category
+    difficulty_counts = {"easy": 0, "medium": 0, "hard": 0}
+    for clip in clips:
+        diff = (clip.difficulty or "medium").lower()
+        difficulty_counts[diff] = difficulty_counts.get(diff, 0) + 1
+
     team_results = []
     for team in teams:
         team_data = {
@@ -897,18 +900,24 @@ def list_scoreboard(list_id):
             "total_correct": 0,
             "total_incorrect": 0,
             "total_answered": 0,
+            "by_difficulty": {
+                "hard": {"correct": 0, "incorrect": 0, "total": 0},
+                "medium": {"correct": 0, "incorrect": 0, "total": 0},
+                "easy": {"correct": 0, "incorrect": 0, "total": 0},
+            },
         }
 
-        # Get all answers for this team on this list
         answers = Answer.query.filter(
             Answer.team_id == team.id, Answer.clip_id.in_([clip.id for clip in clips])
         ).all()
 
-        # Create a lookup for answers by clip_id
         answer_lookup = {answer.clip_id: answer for answer in answers}
 
-        # Process each clip
         for clip in clips:
+            diff = (clip.difficulty or "medium").lower()
+            if diff not in team_data["by_difficulty"]:
+                team_data["by_difficulty"][diff] = {"correct": 0, "incorrect": 0, "total": 0}
+
             if clip.id in answer_lookup:
                 answer = answer_lookup[clip.id]
                 team_data["clip_results"][clip.id] = {
@@ -918,13 +927,16 @@ def list_scoreboard(list_id):
                 }
                 if answer.is_correct:
                     team_data["total_correct"] += 1
+                    team_data["by_difficulty"][diff]["correct"] += 1
                 else:
                     team_data["total_incorrect"] += 1
-                team_data["total_answered"] += 1
-            else:
-                team_data["clip_results"][clip.id] = None  # Not answered
+                    team_data["by_difficulty"][diff]["incorrect"] += 1
 
-        # Calculate accuracy
+                team_data["total_answered"] += 1
+                team_data["by_difficulty"][diff]["total"] += 1
+            else:
+                team_data["clip_results"][clip.id] = None
+
         team_data["accuracy"] = (
             team_data["total_correct"] / team_data["total_answered"] * 100
             if team_data["total_answered"] > 0
@@ -933,15 +945,33 @@ def list_scoreboard(list_id):
 
         team_results.append(team_data)
 
-    # Sort teams by score (correct answers), then by accuracy
-    team_results.sort(key=lambda x: (x["total_correct"], x["accuracy"]), reverse=True)
+    # Sort hierarchy:
+    # 1. Total correct answers (descending)
+    # 2. Hard correct answers (descending)
+    # 3. Medium correct answers (descending)
+    # 4. Easy correct answers (descending)
+    # 5. Least unanswered clips (descending total_answered == ascending unanswered)
+    team_results.sort(
+        key=lambda x: (
+            x["total_correct"],
+            x["by_difficulty"].get("hard", {}).get("correct", 0),
+            x["by_difficulty"].get("medium", {}).get("correct", 0),
+            x["by_difficulty"].get("easy", {}).get("correct", 0),
+            x["total_answered"],
+        ),
+        reverse=True,
+    )
 
-    # Add ranking
+    # Assign ranks after sorting
     for i, team_data in enumerate(team_results):
         team_data["rank"] = i + 1
 
     return render_template(
-        "list_scoreboard.html", lst=lst, clips=clips, team_results=team_results
+        "list_scoreboard.html",
+        lst=lst,
+        clips=clips,
+        team_results=team_results,
+        difficulty_counts=difficulty_counts,
     )
 
 @bp.route("/clips/<int:clip_id>/edit", methods=["POST"])
