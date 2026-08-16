@@ -14,7 +14,7 @@ services:
         condition: service_healthy
 
   db:
-    image: postgres:latest
+    image: postgres:17
     container_name: phaderkampit_db
     environment:
       - POSTGRES_DB=app
