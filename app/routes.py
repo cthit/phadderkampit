@@ -626,8 +626,8 @@ def record_batch_answers():
         result = request.form.get(result_field)
         notes = request.form.get(notes_field, "").strip()
 
-        # Skip if no result provided for this clip
-        if not result or result == "skip":
+        # Missing fields are untouched; an explicit skip is recorded as incorrect.
+        if not result:
             continue
 
         is_correct = result == "correct"
