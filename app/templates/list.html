@@ -192,8 +192,11 @@
                 <button type="button" onclick="clearAll()" style="background: #6c757d; color: white;">⏭️ Clear All</button>
             </div>
 
-            <div style="margin-top: 1rem;">
-                <button type="submit" style="background: #28a745; color: white;">📝 Record All Answers</button>
+            <div style="margin-top: 1rem; display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                <button type="button" id="next-cycle-button" onclick="startNextCycle()"
+                    style="background: #007bff; color: white;">🔄 Cycle</button>
+                <button type="submit" style="background: #28a745; color: white;">📝 Submit Results</button>
+                <span id="cycle-status" aria-live="polite" style="color: #495057;"></span>
             </div>
         </div>
     </form>
@@ -439,24 +442,89 @@
     // Helper functions for batch operations
     function selectAllCorrect() {
         document.querySelectorAll('input[name$="_result"][value="correct"]').forEach(radio => {
-            radio.checked = true;
+            if (radio.closest('.clip-batch-row').style.display !== 'none') {
+                radio.checked = true;
+            }
         });
     }
 
     function selectAllWrong() {
         document.querySelectorAll('input[name$="_result"][value="wrong"]').forEach(radio => {
-            radio.checked = true;
+            if (radio.closest('.clip-batch-row').style.display !== 'none') {
+                radio.checked = true;
+            }
         });
     }
 
     function clearAll() {
         document.querySelectorAll('input[name$="_result"][value="skip"]').forEach(radio => {
-            radio.checked = true;
+            if (radio.closest('.clip-batch-row').style.display !== 'none') {
+                radio.checked = true;
+            }
         });
         document.querySelectorAll('input[name$="_notes"]').forEach(input => {
-            input.value = '';
+            if (input.closest('.clip-batch-row').style.display !== 'none') {
+                input.value = '';
+            }
         });
     }
+
+    function startNextCycle() {
+        const rows = Array.from(document.querySelectorAll('.clip-batch-row'));
+        let newlyHidden = 0;
+
+        rows.forEach(row => {
+            const correct = row.querySelector('input[name$="_result"][value="correct"]');
+            if (correct.checked) {
+                if (row.style.display !== 'none') newlyHidden += 1;
+                row.style.display = 'none';
+
+                const audio = row.querySelector('audio');
+                if (audio) {
+                    audio.pause();
+                    audio.currentTime = 0;
+                }
+            }
+        });
+
+        const remaining = rows.filter(row => row.style.display !== 'none').length;
+        const status = document.getElementById('cycle-status');
+        if (remaining === 0) {
+            status.textContent = 'All sounds succeeded. You can submit the results.';
+        } else if (newlyHidden > 0) {
+            status.textContent = `${newlyHidden} succeeded sound${newlyHidden === 1 ? '' : 's'} hidden; ${remaining} remaining.`;
+        } else {
+            status.textContent = `${remaining} sound${remaining === 1 ? '' : 's'} still remaining.`;
+        }
+
+        const firstRemainingAudio = rows
+            .find(row => row.style.display !== 'none')
+            ?.querySelector('audio');
+        if (firstRemainingAudio) firstRemainingAudio.focus();
+    }
+
+    document.getElementById('batch-form').addEventListener('submit', function(event) {
+        const skipped = Array.from(
+            this.querySelectorAll('input[name$="_result"][value="skip"]')
+        ).filter(radio => radio.checked);
+
+        if (skipped.length === 0) return;
+
+        const shouldMarkFailed = confirm(
+            `${skipped.length} sound${skipped.length === 1 ? ' is' : 's are'} still skipped. Mark ${skipped.length === 1 ? 'it' : 'them'} as failed and submit?`
+        );
+        if (!shouldMarkFailed) {
+            event.preventDefault();
+            return;
+        }
+
+        skipped.forEach(skipRadio => {
+            const wrongRadio = this.querySelector(
+                `input[name="${skipRadio.name}"][value="wrong"]`
+            );
+            wrongRadio.checked = true;
+        });
+    });
 
     // Event delegation for delete/clear buttons
     document.addEventListener('click', function (e) {
